@@ -48,19 +48,17 @@ error_code_t thermalMgrSendEvent(thermal_mgr_event_t *event)
 {
   /* Send an event to the thermal manager queue */
   error_code_t errCode;
-  if (!event)
+  if (event == NULL)
   {
     return ERR_CODE_INVALID_ARG;
   }
-  if (!thermalMgrQueueHandle)
+  if (thermalMgrQueueHandle == NULL)
   {
-    return ERR_CODE_QUEUE_HANDLE_NULL;
+    return ERR_CODE_INVALID_STATE;
   }
-  if (uxQueueSpacesAvailable(thermalMgrQueueHandle) == 0)
-  {
+  if(xQueueSend(thermalMgrQueueHandle, event, (TickType_t)0) == errQUEUE_FULL){
     return ERR_CODE_QUEUE_FULL;
   }
-  LOG_IF_ERROR_CODE(xQueueSend(thermalMgrQueueHandle, event, (TickType_t)0));
   return ERR_CODE_SUCCESS;
 }
 
@@ -81,7 +79,6 @@ static void thermalMgr(void *pvParameters)
   {
     if (xQueueReceive(thermalMgrQueueHandle, &buffer, (TickType_t)0) == pdFALSE)
     {
-      LOG_ERROR(ERR_CODE_INVALID_QUEUE_MSG);
       continue;
     }
     if (buffer.type == THERMAL_MGR_EVENT_MEASURE_TEMP_CMD)
@@ -103,7 +100,7 @@ static void thermalMgr(void *pvParameters)
     }
     else
     {
-      LOG_ERROR(ERR_CDOE_INVALID_EVENT);
+      LOG_ERROR(ERR_CODE_INVALID_EVENT);
     }
   }
 }
